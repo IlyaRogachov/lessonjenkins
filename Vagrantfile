@@ -1,0 +1,137 @@
+BOX_IMAGE = "bento/ubuntu-16.04"
+NODE_COUNT = 1
+
+Vagrant.configure("2") do |config|
+  config.vm.define "puppet.local" do |subconfig|
+    subconfig.vm.box = BOX_IMAGE
+    subconfig.vm.provision "shell", inline: <<-SHELL
+    echo nameserver 8.8.8.8 >> /etc/resolv.conf
+    echo 192.168.56.44   puppet.local >> /etc/hosts
+    echo puppet > /etc/hostname
+    curl -O https://apt.puppetlabs.com/puppetlabs-release-pc1-xenial.deb
+    sudo dpkg -i puppetlabs-release-pc1-xenial.deb
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4528B6CD9E61EF26
+    sudo apt-get update
+    sudo apt-get -y install puppetserver
+    sudo apt-get -y install ntp
+    sudo sed -i 's/.*JAVA_ARGS.*/JAVA_ARGS="-Xms512m -Xmx512m"/' /etc/default/puppetserver
+    echo '[agent]' >> /etc/puppetlabs/puppet/puppet.conf
+    echo runinterval=300 >> /etc/puppetlabs/puppet/puppet.conf
+    sudo systemctl start puppetserver
+    sudo systemctl enable puppetserver
+    sudo service puppet start
+    SHELL
+    subconfig.vm.hostname = "puppet.local"
+    subconfig.vm.network :private_network, ip: "192.168.56.44"
+    config.vm.provider :virtualbox do |vb|
+	 vb.customize ["modifyvm", :id, "--cableconnected0", "on"]
+         vb.memory = "2000"
+	 vb.gui = true
+#         vb.cpus = 2
+    end
+    subconfig.vm.provision "file", source: "./templates/server_ca.pub", destination: "~/.ssh/authorized_keys"
+    subconfig.vm.provision "file", source: "./templates/server_ca", destination: "/home/vagrant/server_ca"
+    subconfig.vm.provision "file", source: "./templates/determip.sh", destination: "/home/vagrant/determip.sh"
+    subconfig.vm.synced_folder "./templates/myfiles/myfiles", "/etc/puppetlabs/code/modules/myfiles"
+    subconfig.vm.synced_folder "./templates/puppet/",  "/etc/puppetlabs/code/environments/production/manifests"
+  end
+
+  config.vm.define "jenkins.local" do |subconfig|
+    subconfig.vm.box = BOX_IMAGE
+    subconfig.vm.hostname = "jenkins.local"
+    subconfig.vm.network :private_network, ip: "192.168.56.60"
+    config.vm.provider :virtualbox do |vb|
+	 vb.customize ["modifyvm", :id, "--cableconnected0", "on"]
+         vb.memory = "2000"
+	 vb.gui = true
+#         vb.cpus = 2
+    end
+    subconfig.vm.provision "file", source: "./templates/server_ca.pub", destination: "~/.ssh/authorized_keys"
+    subconfig.vm.provision "file", source: "./templates/server_ca", destination: "/home/vagrant/server_ca"
+    subconfig.vm.provision "shell", inline: <<-SHELL
+    echo nameserver 8.8.8.8 >> /etc/resolv.conf
+    echo 192.168.56.44   puppet.local >> /etc/hosts
+    curl -O https://apt.puppetlabs.com/puppetlabs-release-pc1-xenial.deb
+    sudo mkdir -p /var/lib/jenkins/.ssh/
+    sudo cp -rp /home/vagrant/server_ca /var/lib/jenkins/.ssh/
+    sudo chmod 600 /var/lib/jenkins/.ssh/server_ca
+    sudo dpkg -i puppetlabs-release-pc1-xenial.deb
+    wget -q -O - http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key | sudo apt-key add -
+    sudo sh -c 'echo deb http://pkg.jenkins-ci.org/debian binary/ > /etc/apt/sources.list.d/jenkins.list'
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4528B6CD9E61EF26
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys FCEF32E745F2C3D5
+    sudo apt-get update
+    sudo apt-get -y install ntp
+    sudo apt-get install puppet-agent
+    echo certname = 'jenkins-192.168.56.60'.local > /etc/puppetlabs/puppet/puppet.conf
+    echo server = puppet.local >> /etc/puppetlabs/puppet/puppet.conf
+    echo runinterval=200 >> /etc/puppetlabs/puppet/puppet.conf
+    sudo systemctl start puppet
+    sudo systemctl enable puppet
+    sudo service puppet start
+   SHELL
+  end
+
+  config.vm.define "nginx.local" do |subconfig|
+    subconfig.vm.box = BOX_IMAGE
+    subconfig.vm.hostname = "nginx.local"
+    subconfig.vm.network :private_network, ip: "192.168.56.62"
+    config.vm.provider :virtualbox do |vb|
+	 vb.customize ["modifyvm", :id, "--cableconnected0", "on"]
+         vb.memory = "2000"
+	 vb.gui = true
+#         vb.cpus = 2
+    end
+    subconfig.vm.provision "file", source: "./templates/server_ca.pub", destination: "~/.ssh/authorized_keys"
+    subconfig.vm.provision "file", source: "./templates/server_ca", destination: "/home/vagrant/server_ca"
+    subconfig.vm.provision "shell", inline: <<-SHELL
+    echo nameserver 8.8.8.8 >> /etc/resolv.conf
+    echo 192.168.56.44   puppet.local >> /etc/hosts
+    curl -O https://apt.puppetlabs.com/puppetlabs-release-pc1-xenial.deb
+    sudo dpkg -i puppetlabs-release-pc1-xenial.deb
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4528B6CD9E61EF26
+    sudo apt-get update
+    sudo apt-get -y install ntp
+    sudo apt-get install puppet-agent
+    echo certname = 'nginx-192.168.56.62'.local > /etc/puppetlabs/puppet/puppet.conf
+    echo server = puppet.local >> /etc/puppetlabs/puppet/puppet.conf
+    echo runinterval=200 >> /etc/puppetlabs/puppet/puppet.conf
+    sudo systemctl start puppet
+    sudo systemctl enable puppet
+    sudo service puppet start
+   SHELL
+  end
+
+
+  (1..NODE_COUNT).each do |i|
+    config.vm.define "node#{i}.local" do |subconfig|
+      subconfig.vm.box = BOX_IMAGE
+      subconfig.vm.hostname = "node#{i}.local"
+      subconfig.vm.network :private_network, ip: "192.168.56.#{i + 50}"
+      config.vm.provider :virtualbox do |vb|
+       	 vb.customize ["modifyvm", :id, "--cableconnected0", "on"]
+         vb.memory = "2000"
+	 vb.gui = true
+#         vb.cpus = 2
+      end
+      subconfig.vm.provision "file", source: "./templates/server_ca.pub", destination: "~/.ssh/authorized_keys"
+      subconfig.vm.provision "file", source: "./templates/server_ca", destination: "/home/vagrant/server_ca"
+      subconfig.vm.provision "shell", inline: <<-SHELL
+      echo nameserver 8.8.8.8 >> /etc/resolv.conf
+      echo 192.168.56.44   puppet.local >> /etc/hosts
+      curl -O https://apt.puppetlabs.com/puppetlabs-release-pc1-xenial.deb
+      sudo dpkg -i puppetlabs-release-pc1-xenial.deb
+       sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4528B6CD9E61EF26
+      sudo apt-get update
+      sudo apt-get -y install ntp
+      sudo apt-get install puppet-agent
+      echo certname = 'node#{i}-192.168.56.#{i + 50}'.local > /etc/puppetlabs/puppet/puppet.conf
+      echo server = puppet.local >> /etc/puppetlabs/puppet/puppet.conf
+      echo runinterval=300 >> /etc/puppetlabs/puppet/puppet.conf
+      sudo systemctl start puppet
+      sudo systemctl enable puppet
+      sudo service puppet start
+      SHELL
+    end
+  end
+ end
