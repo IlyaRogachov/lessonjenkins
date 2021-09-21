@@ -144,10 +144,10 @@ node 'jenkins.local' {
   }
 
 
-  exec { 'authorize_jenkins':
-    command => 'cd /home/vagrant && pass=`sudo cat /var/lib/jenkins/secrets/master.key` && echo 'jenkins.model.Jenkins.instance.securityRealm.createAccount("admin", "admin")' | sudo java -jar jenkins-cli.jar -auth admin:$pass -s http://localhost:8080/ groovy =',
-    path => "/usr/bin",
-    }
+#  exec { 'authorize_jenkins':
+#    command => 'cd /home/vagrant && pass=`sudo cat /var/lib/jenkins/secrets/master.key` && echo 'jenkins.model.Jenkins.instance.securityRealm.createAccount("admin", "admin")' | sudo java -jar jenkins-cli.jar -auth admin:$pass -s http://localhost:8080/ groovy =',
+#    path => "/usr/bin",
+#    }
 
 #  exec { 'authorize_jenkins':
 #    command => 'java -jar /home/vagrant/jenkins-cli.jar -auth admin:admin -s http://127.0.0.1:8080/',

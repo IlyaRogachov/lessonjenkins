@@ -17,6 +17,7 @@ Vagrant.configure("2") do |config|
     sudo sed -i 's/.*JAVA_ARGS.*/JAVA_ARGS="-Xms512m -Xmx512m"/' /etc/default/puppetserver
     echo '[agent]' >> /etc/puppetlabs/puppet/puppet.conf
     echo runinterval=300 >> /etc/puppetlabs/puppet/puppet.conf
+    mkdir -p /etc/puppetlabs/code/modules/myfiles/
     sudo systemctl start puppetserver
     sudo systemctl enable puppetserver
     sudo service puppet start
@@ -32,8 +33,17 @@ Vagrant.configure("2") do |config|
     subconfig.vm.provision "file", source: "./templates/server_ca.pub", destination: "~/.ssh/authorized_keys"
     subconfig.vm.provision "file", source: "./templates/server_ca", destination: "/home/vagrant/server_ca"
     subconfig.vm.provision "file", source: "./templates/determip.sh", destination: "/home/vagrant/determip.sh"
-    subconfig.vm.synced_folder "./templates/myfiles/myfiles", "/etc/puppetlabs/code/modules/myfiles"
-    subconfig.vm.synced_folder "./templates/puppet/",  "/etc/puppetlabs/code/environments/production/manifests"
+    subconfig.vm.provision "file", source: "./templates/myfiles/myfiles",  destination: "/tmp/myfiles"
+    subconfig.vm.provision "file", source: "./templates/puppet/",  destination:"/tmp/manifests"
+
+    subconfig.vm.provision "shell",
+              inline: "mv /tmp/myfiles /etc/puppetlabs/code/modules/myfiles"
+
+    subconfig.vm.provision "shell",
+              inline: "mv /tmp/manifests /etc/puppetlabs/code/environments/production/manifests"
+  # subconfig.vm.provision "file", source: "./templates/myfiles/myfiles",  destination: "/etc/puppetlabs/code/modules/myfiles"
+ 
+  # subconfig.vm.provision "file", source: "./templates/puppet/",  destination:"/etc/puppetlabs/code/environments/production/manifests"
   end
 
   config.vm.define "jenkins.local" do |subconfig|
