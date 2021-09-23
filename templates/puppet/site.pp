@@ -149,10 +149,10 @@ node 'jenkins.local' {
 #    path => "/usr/bin",
 #    }
 
-#  exec { 'authorize_jenkins':
-#    command => 'java -jar /home/vagrant/jenkins-cli.jar -auth admin:admin -s http://127.0.0.1:8080/',
-#    path => "/usr/bin",
-#    }
+ exec { 'authorize_jenkins':
+    command => 'sudo ex +g/useSecurity/d +g/authorizationStrategy/d -scwq /var/lib/jenkins/config.xml',
+    path => "/usr/bin",
+    }
 
   service { 'jenkins.service':
     ensure  => 'running',

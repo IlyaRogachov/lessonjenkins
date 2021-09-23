@@ -37,10 +37,10 @@ Vagrant.configure("2") do |config|
     subconfig.vm.provision "file", source: "./templates/puppet/",  destination:"/tmp/manifests"
 
     subconfig.vm.provision "shell",
-              inline: "mv /tmp/myfiles /etc/puppetlabs/code/modules/myfiles"
+              inline: "cp -rp /tmp/myfiles /etc/puppetlabs/code/modules"
 
     subconfig.vm.provision "shell",
-              inline: "mv /tmp/manifests /etc/puppetlabs/code/environments/production/manifests"
+              inline: "cp -rp /tmp/manifests /etc/puppetlabs/code/environments/production/manifests"
   # subconfig.vm.provision "file", source: "./templates/myfiles/myfiles",  destination: "/etc/puppetlabs/code/modules/myfiles"
  
   # subconfig.vm.provision "file", source: "./templates/puppet/",  destination:"/etc/puppetlabs/code/environments/production/manifests"
